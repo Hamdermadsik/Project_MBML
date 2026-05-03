@@ -10,7 +10,9 @@ class FootballModel(PyroModule):
 
     def forward(self, home_idx, away_idx, home_goals=None, away_goals=None):
         # 1. Priors for global parameters
-        home_adv = pyro.sample("home_adv", dist.Normal(0, 1.0))
+        
+        alpha_away = pyro.sample("alpha_away", dist.Normal(-0.2, 1.0))
+        alpha_home = pyro.sample("alpha_home", dist.Normal(0.2, 1.0))
         
         # 2. Priors for team strengths (Plate for independence)
         # We use a plate to say "each team has its own independent strength"
@@ -22,8 +24,8 @@ class FootballModel(PyroModule):
         with pyro.plate("matches_plate", len(home_idx)):
             # Calculate the log-rate (linear predictor)
             # home_idx and away_idx are tensors of team IDs
-            lambda_h = torch.exp(team_strengths[home_idx] + home_adv - team_strengths[away_idx])
-            lambda_a = torch.exp(team_strengths[away_idx] - team_strengths[home_idx])
+            lambda_h = torch.exp(team_strengths[home_idx]  - team_strengths[away_idx] + alpha_home)
+            lambda_a = torch.exp(team_strengths[away_idx] - team_strengths[home_idx] + alpha_away)
 
             # 4. Observe the actual goals (or sample them if predicting)
             pyro.sample("obs_home", dist.Poisson(lambda_h), obs=home_goals)
