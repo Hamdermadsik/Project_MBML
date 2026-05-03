@@ -78,6 +78,16 @@ We restrict to:
 - English Premier League (EPL)
 - Stored in: data/epl_matches.csv
 
+Verified dataset facts for `data/epl_matches.csv`:
+- 3040 rows
+- 7 columns
+- 8 seasons: `2008/2009` to `2015/2016`
+- 380 matches per season
+- 34 unique teams overall
+- No missing values
+- No duplicate matches on: `season`, `stage`, `date`, `home_team`, `away_team`
+- Stages run from 1 to 38 in every season
+
 ### Data Format (CSV)
 
 Columns:
@@ -93,12 +103,136 @@ Columns:
 
 ## Data Preprocessing
 
-- Convert team names → integer indices
+Current preprocessing contract for the baseline notebook:
+- Parse `date` as datetime
+- Standardize dtypes:
+  - `season` as string
+  - `stage` as integer
+  - `home_team_goal` and `away_team_goal` as integer
+- Sort matches chronologically by:
+  - `date`
+  - `stage`
+  - `home_team`
+  - `away_team`
+- Keep raw goal columns unchanged
+- Convert team names → integer indices using training teams only
 - Create arrays:
-  home_team[n]
-  away_team[n]
-  goals_home[n]
-  goals_away[n]
+  - `home_team[n]`
+  - `away_team[n]`
+  - `goals_home[n]`
+  - `goals_away[n]`
+
+Important:
+- The team index mapping is built from training teams only
+- Held-out matches involving unseen promoted teams are excluded from the baseline evaluation set
+
+---
+
+## Current Notebook Deliverable
+
+Implemented notebook:
+- `notebooks/epl_mbml_notebook.ipynb`
+
+Purpose of the notebook:
+- First final-style English notebook for the project
+- Self-explanatory and structured as a deliverable, not a scratch notebook
+- Stops before Pyro implementation
+- Covers:
+  - project framing
+  - dataset loading
+  - integrity checks
+  - light cleaning
+  - focused exploratory analysis
+  - baseline modeling assumptions
+  - chronological train/test split
+  - model-ready preprocessing outputs
+
+Notebook sections:
+1. Introduction and project goal
+2. Dataset overview
+3. Data quality and cleaning
+4. Exploratory analysis
+5. Modeling assumptions for the baseline
+6. Train/test split
+7. Model-ready preprocessing output
+8. Short conclusion and next modeling step
+
+---
+
+## Baseline Split Used In Notebook
+
+Chronological split:
+- Training seasons: `2008/2009` through `2014/2015`
+- Held-out test season: `2015/2016`
+
+Verified split sizes:
+- `train_df`: 2660 matches
+- `test_df`: 380 matches
+- `test_seen_df`: 306 matches
+- `test_unseen_df`: 74 matches
+
+Unseen promoted teams in held-out season:
+- `Bournemouth`
+- `Watford`
+
+Baseline evaluation rule:
+- Only evaluate held-out matches where both teams were seen in training
+- Exclude matches involving `Bournemouth` or `Watford` because the baseline model has no latent strength parameter for teams unseen in training
+
+Training-team count for the baseline index:
+- 32 teams
+
+---
+
+## Model-Ready Outputs Already Defined
+
+The notebook defines these objects for later Pyro code:
+- `train_df`
+- `test_df`
+- `test_seen_df`
+- `test_unseen_df`
+- `team_to_idx`
+- `idx_to_team`
+- `home_team_train`
+- `away_team_train`
+- `goals_home_train`
+- `goals_away_train`
+- `home_team_test`
+- `away_team_test`
+- `goals_home_test`
+- `goals_away_test`
+- `num_teams`
+- `num_train_matches`
+- `num_test_matches`
+
+Array interface:
+- Team id arrays have shape `(N_train,)` or `(N_test_seen,)`
+- Goal arrays have shape `(N_train,)` or `(N_test_seen,)`
+- Exported arrays use integer dtype
+- Team names can be recovered through `idx_to_team` for posterior ranking interpretation
+
+---
+
+## Focused Exploratory Findings Already Established
+
+Model-relevant summary from the notebook:
+- Mean home goals: `1.551`
+- Mean away goals: `1.160`
+- Mean total goals: `2.711`
+- Home win rate: `0.457`
+- Draw rate: `0.258`
+- Away win rate: `0.285`
+
+Visuals already included in the notebook:
+- Matches per season
+- Distribution of home and away goals
+- Distribution of total goals
+- Average home-vs-away goals by season
+
+Interpretation used in the notebook:
+- The first model intentionally assumes one latent strength per team across all seasons
+- This is simple and interpretable, but ignores temporal strength drift and promotion/relegation effects
+- That limitation is accepted for the first MBML baseline and should be stated clearly in future work
 
 ---
 
