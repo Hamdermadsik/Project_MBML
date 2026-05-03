@@ -115,6 +115,14 @@ Current preprocessing contract for the baseline notebook:
   - `home_team`
   - `away_team`
 - Keep raw goal columns unchanged
+- Define a mid-season forecasting split:
+  - `TEST_SEASON = "2015/2016"`
+  - `FIRST_HALF_MAX_STAGE = 19`
+  - `historical_df` = all seasons except `2015/2016`
+  - `first_half_2015_df` = `2015/2016` stages `1-19`
+  - `second_half_2015_df` = `2015/2016` stages `20-38`
+  - `train_df` = `historical_df` + `first_half_2015_df`
+  - `test_df` = `second_half_2015_df`
 - Convert team names → integer indices using training teams only
 - Create arrays:
   - `home_team[n]`
@@ -124,7 +132,7 @@ Current preprocessing contract for the baseline notebook:
 
 Important:
 - The team index mapping is built from training teams only
-- Held-out matches involving unseen promoted teams are excluded from the baseline evaluation set
+- The first-half `2015/2016` matches are included intentionally so every second-half forecast team is covered by the training index
 
 ---
 
@@ -144,7 +152,7 @@ Purpose of the notebook:
   - light cleaning
   - focused exploratory analysis
   - baseline modeling assumptions
-  - chronological train/test split
+  - chronological mid-season train/test split
   - model-ready preprocessing outputs
 
 Notebook sections:
@@ -162,35 +170,40 @@ Notebook sections:
 ## Baseline Split Used In Notebook
 
 Chronological split:
-- Training seasons: `2008/2009` through `2014/2015`
-- Held-out test season: `2015/2016`
+- Historical training seasons: `2008/2009` through `2014/2015`
+- Additional training window: `2015/2016` stages `1-19`
+- Held-out forecast window: `2015/2016` stages `20-38`
 
 Verified split sizes:
-- `train_df`: 2660 matches
-- `test_df`: 380 matches
-- `test_seen_df`: 306 matches
-- `test_unseen_df`: 74 matches
+- `historical_df`: 2660 matches
+- `first_half_2015_df`: 190 matches
+- `second_half_2015_df`: 190 matches
+- `train_df`: 2850 matches
+- `test_df`: 190 matches
 
-Unseen promoted teams in held-out season:
-- `Bournemouth`
-- `Watford`
+Verified season-stage facts for `2015/2016`:
+- 10 matches per stage
+- 190 matches in stages `1-19`
+- 190 matches in stages `20-38`
 
 Baseline evaluation rule:
-- Only evaluate held-out matches where both teams were seen in training
-- Exclude matches involving `Bournemouth` or `Watford` because the baseline model has no latent strength parameter for teams unseen in training
+- The notebook is now framed as a mid-season forecast of the second half of `2015/2016`
+- No teams are excluded from evaluation
+- All 20 teams in the forecast window are already present in the training index because the first half of `2015/2016` is included in training
 
 Training-team count for the baseline index:
-- 32 teams
+- 34 teams
 
 ---
 
 ## Model-Ready Outputs Already Defined
 
 The notebook defines these objects for later Pyro code:
+- `historical_df`
+- `first_half_2015_df`
+- `second_half_2015_df`
 - `train_df`
 - `test_df`
-- `test_seen_df`
-- `test_unseen_df`
 - `team_to_idx`
 - `idx_to_team`
 - `home_team_train`
@@ -206,9 +219,10 @@ The notebook defines these objects for later Pyro code:
 - `num_test_matches`
 
 Array interface:
-- Team id arrays have shape `(N_train,)` or `(N_test_seen,)`
-- Goal arrays have shape `(N_train,)` or `(N_test_seen,)`
+- Team id arrays have shape `(2850,)` for training and `(190,)` for the second-half forecast set
+- Goal arrays have shape `(2850,)` for training and `(190,)` for the second-half forecast set
 - Exported arrays use integer dtype
+- `team_to_idx` covers every team appearing in the second half of `2015/2016`
 - Team names can be recovered through `idx_to_team` for posterior ranking interpretation
 
 ---
@@ -231,8 +245,9 @@ Visuals already included in the notebook:
 
 Interpretation used in the notebook:
 - The first model intentionally assumes one latent strength per team across all seasons
-- This is simple and interpretable, but ignores temporal strength drift and promotion/relegation effects
-- That limitation is accepted for the first MBML baseline and should be stated clearly in future work
+- First-half `2015/2016` data is included intentionally to support a second-half forecast
+- This improves team coverage, but it is no longer a pure unseen-season experiment
+- The model remains simple and interpretable, but ignores temporal strength drift and promotion/relegation effects
 
 ---
 
